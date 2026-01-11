@@ -41,7 +41,7 @@ The project consists of several components:
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/thaolt/txt2svg.git
 cd txt2svg
 ```
 
