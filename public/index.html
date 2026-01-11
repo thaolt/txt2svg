@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Text to SVG Service</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .demo { border: 1px solid #ccc; padding: 20px; margin: 20px 0; text-align: center; }
+        input, select { margin: 5px; padding: 5px; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Text to SVG Service</h1>
+    <p>Convert text to SVG using TrueType fonts</p>
+    
+    <div class="demo">
+        <h2>Try it out:</h2>
+        <input type="text" id="text" placeholder="Enter text" value="Hello World">
+        <input type="text" id="color" placeholder="Color" value="#000000">
+        <select id="font">
+            <option value="roboto" selected>Roboto</option>
+            <option value="wendyone">Wendy One</option>
+            <option value="alfaslabone">Alfa Slab One</option>
+        </select>
+        <button onclick="generateSVG()">Generate SVG</button>
+        <div id="result"></div>
+    </div>
+    
+    <h2>API Usage:</h2>
+    <p><code>GET /service?text=Hello&color=000000&font=roboto</code></p>
+
+    <h2>Embed as Image</h2>
+    <p>
+        <code>
+            <pre>&lt;img src="https://your-worker-url/service?text=Hello&color=000000&font=roboto" alt="SVG Image" /&gt;</pre>
+        </code>
+    </p>
+    
+    <script>
+        function generateSVG() {
+            const text = document.getElementById('text').value;
+            const color = document.getElementById('color').value.replace('#', '');
+            const font = document.getElementById('font').value;
+
+            fetch(`/service?text=${encodeURIComponent(text)}&color=${color}&font=${encodeURIComponent(font)}`)
+                .then(response => response.text())
+                .then(svg => {
+                    document.getElementById('result').innerHTML = svg;
+                })
+                .catch(error => {
+                    document.getElementById('result').innerHTML = 'Error: ' + error.message;
+                });
+        }
+    </script>
+</body>
+</html>
