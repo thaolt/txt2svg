@@ -207,6 +207,47 @@ uint32_t wasm_alloc(uint32_t sz) {
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
+// Include utf8.h only for native builds (not WebAssembly)
+#ifndef __wasm__
+    #include "utf8.h"
+#else
+// Minimal UTF-8 codepoint decoder for WASM
+typedef int32_t utf8_int32_t;
+typedef char utf8_int8_t;
+
+static utf8_int8_t* utf8codepoint(const utf8_int8_t* str, utf8_int32_t* out_codepoint) {
+    utf8_int32_t cp = 0;
+    int bytes = 0;
+
+    if (!str || !out_codepoint) return (utf8_int8_t*)str;
+
+    if ((str[0] & 0x80) == 0) {
+        // 1-byte sequence (0xxxxxxx)
+        cp = str[0];
+        bytes = 1;
+    } else if ((str[0] & 0xE0) == 0xC0) {
+        // 2-byte sequence (110xxxxx 10xxxxxx)
+        cp = ((str[0] & 0x1F) << 6) | (str[1] & 0x3F);
+        bytes = 2;
+    } else if ((str[0] & 0xF0) == 0xE0) {
+        // 3-byte sequence (1110xxxx 10xxxxxx 10xxxxxx)
+        cp = ((str[0] & 0x0F) << 12) | ((str[1] & 0x3F) << 6) | (str[2] & 0x3F);
+        bytes = 3;
+    } else if ((str[0] & 0xF8) == 0xF0) {
+        // 4-byte sequence (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
+        cp = ((str[0] & 0x07) << 18) | ((str[1] & 0x3F) << 12) | ((str[2] & 0x3F) << 6) | (str[3] & 0x3F);
+        bytes = 4;
+    } else {
+        // Invalid UTF-8, treat as single byte
+        cp = str[0];
+        bytes = 1;
+    }
+
+    *out_codepoint = cp;
+    return (utf8_int8_t*)(str + bytes);
+}
+#endif
+
 // ---------------- utils ----------------
 static uint32_t write_str(char *o, uint32_t n, const char *s) {
     while (*s) o[n++] = *s++;
@@ -270,8 +311,13 @@ uint32_t wasm_generate_svg(
 
     int pen_x = 10;
 
-    for (uint32_t i = 0; text[i]; i++) {
-        int glyph = stbtt_FindGlyphIndex(&font, text[i]);
+    const char *p = text;
+    int prev_glyph = 0;
+
+    while (*p) {
+        utf8_int32_t codepoint;
+        p = (const char*)utf8codepoint((const utf8_int8_t*)p, &codepoint);
+        int glyph = stbtt_FindGlyphIndex(&font, codepoint);
 
         stbtt_vertex *v;
         int n = stbtt_GetGlyphShape(&font, glyph, &v);
@@ -338,12 +384,13 @@ uint32_t wasm_generate_svg(
         stbtt_GetGlyphHMetrics(&font, glyph, &ax, 0);
         pen_x += (int)(ax * scale);
 
-        // Fix bounds checking for kerning
-        if (text[i] && text[i+1])
-            pen_x += (int)(scale * stbtt_GetGlyphKernAdvance(
-                &font, glyph,
-                stbtt_FindGlyphIndex(&font, text[i+1])
-            ));
+        // Apply kerning between current and next glyph
+        if (*p) {
+            utf8_int32_t next_codepoint;
+            const char *next_ptr = (const char*)utf8codepoint((const utf8_int8_t*)p, &next_codepoint);
+            int next_glyph = stbtt_FindGlyphIndex(&font, next_codepoint);
+            pen_x += (int)(scale * stbtt_GetGlyphKernAdvance(&font, glyph, next_glyph));
+        }
     }
 
     // Calculate dimensions from bounding box

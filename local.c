@@ -7,7 +7,7 @@ extern unsigned int wasm_generate_svg(void* textPtr, void* fontPtr, unsigned int
     void* colorPtr, void* outPtr, unsigned int outSize);
 
 int main() {
-    FILE *font_file = fopen("public/fonts/WendyOne.ttf", "rb");
+    FILE *font_file = fopen("public/fonts/Roboto.ttf", "rb");
     if (!font_file) {
         printf("Failed to open font file\n");
         return 1;

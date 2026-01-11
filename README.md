@@ -261,6 +261,7 @@ make txt2svg.wat
 
 ## Roadmap
 
+- [x] UTF-8 supports
 - [ ] Support for additional font formats (WOFF, WOFF2)
 - [ ] Text alignment options (center, right)
 - [ ] Multi-line text support
